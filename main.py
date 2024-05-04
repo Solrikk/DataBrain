@@ -76,10 +76,6 @@ def map_brand_to_id(df, brand_mapping_filename='Бренд.xlsx'):
 
 def convert_to_template(filename, template_filename='Шаблон1.xlsx'):
   uploaded_df = pd.read_excel(filename, engine='openpyxl')
-  template_workbook = load_workbook(template_filename)
-  template_sheet_name = template_workbook.sheetnames[0]
-
-  template_df = read_template(template_filename)
   transformed_df = apply_transformations(uploaded_df)
   transformed_df = map_brand_to_id(transformed_df)
 
@@ -87,24 +83,8 @@ def convert_to_template(filename, template_filename='Шаблон1.xlsx'):
   os.makedirs(converted_dir, exist_ok=True)
   transformed_filename = f"{converted_dir}/{os.path.basename(filename)}"
 
-  transformed_df.to_excel(transformed_filename,
-                          sheet_name=template_sheet_name,
-                          index=False,
-                          na_rep="")
+  transformed_df.to_excel(transformed_filename, index=False, na_rep="")
 
-  transformed_workbook = load_workbook(transformed_filename)
-  transformed_sheet = transformed_workbook[template_sheet_name]
-  template_sheet = template_workbook[template_sheet_name]
-
-  for row in template_sheet.iter_rows():
-    for cell in row:
-      corresponding_cell = transformed_sheet[cell.coordinate]
-      corresponding_cell.border = copy(cell.border)
-      corresponding_cell.fill = copy(cell.fill)
-      corresponding_cell.protection = copy(cell.protection)
-      corresponding_cell.alignment = copy(cell.alignment)
-
-  transformed_workbook.save(transformed_filename)
   return transformed_filename
 
 
