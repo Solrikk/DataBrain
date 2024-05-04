@@ -1,6 +1,7 @@
 from fastapi import FastAPI, File, UploadFile
 from fastapi.responses import FileResponse, HTMLResponse
 import pandas as pd
+import numpy as np
 import os
 from openpyxl import load_workbook
 from copy import copy
@@ -15,7 +16,7 @@ def read_template(filename):
 
 def transform_value(value):
   if pd.isnull(value):
-    return value
+    return None
   if 'м' in str(value):
     return str(value).replace('м', ' см').replace('.', ',').capitalize()
   if 'mm' in str(value):
@@ -26,13 +27,14 @@ def transform_value(value):
 
 def transform_data(df):
   for column in df.columns:
-    df[column] = df[column].apply(lambda x: str(x).capitalize())
+    df[column] = df[column].apply(lambda x: str(x).capitalize()
+                                  if pd.notnull(x) else None)
   return df
 
 
 def convert_years(value):
   if pd.isnull(value):
-    return value
+    return None
   try:
     value = int(value)
     if value == 1:
@@ -45,21 +47,41 @@ def convert_years(value):
     return value.capitalize()
 
 
+def split_colors(df):
+  if 'Цвет' in df.columns:
+    df_colors = df['Цвет'].str.split('/| и ', expand=True)
+    for i, col in enumerate(df_colors.columns):
+      df[f'Цвет-{i+1}'] = df_colors[col].str.strip().apply(
+          lambda x: x.capitalize() if pd.notnull(x) else None)
+    df.drop(columns=['Цвет'], inplace=True)
+  return df
+
+
 def apply_transformations(df):
   df = transform_data(df)
+  df = split_colors(df)
   for column in df.columns:
     if 'срок годности' in column.lower():
       df[column] = df[column].apply(convert_years)
   return df
 
 
-def convert_to_template(filename, template_filename='Шаблон.xlsx'):
+def map_brand_to_id(df, brand_mapping_filename='Бренд.xlsx'):
+  brand_df = pd.read_excel(brand_mapping_filename, engine='openpyxl')
+  brand_mapping = dict(zip(brand_df['Название'], brand_df['ID']))
+  if 'Бренд' in df.columns:
+    df['Бренд_ID'] = df['Бренд'].map(brand_mapping).fillna('Unknown ID')
+  return df
+
+
+def convert_to_template(filename, template_filename='Шаблон1.xlsx'):
   uploaded_df = pd.read_excel(filename, engine='openpyxl')
   template_workbook = load_workbook(template_filename)
   template_sheet_name = template_workbook.sheetnames[0]
 
   template_df = read_template(template_filename)
   transformed_df = apply_transformations(uploaded_df)
+  transformed_df = map_brand_to_id(transformed_df)
 
   converted_dir = "converted_uploads"
   os.makedirs(converted_dir, exist_ok=True)
@@ -67,7 +89,8 @@ def convert_to_template(filename, template_filename='Шаблон.xlsx'):
 
   transformed_df.to_excel(transformed_filename,
                           sheet_name=template_sheet_name,
-                          index=False)
+                          index=False,
+                          na_rep="")
 
   transformed_workbook = load_workbook(transformed_filename)
   transformed_sheet = transformed_workbook[template_sheet_name]
