@@ -3,6 +3,7 @@ from fastapi.responses import FileResponse, HTMLResponse
 import pandas as pd
 import os
 from openpyxl import load_workbook
+from copy import copy
 
 app = FastAPI()
 
@@ -16,18 +17,16 @@ def transform_value(value):
   if pd.isnull(value):
     return value
   if 'м' in str(value):
-    return str(value).replace('м', ' см').replace('.', ',')
+    return str(value).replace('м', ' см').replace('.', ',').capitalize()
   if 'mm' in str(value):
-    return str(float(value.replace('mm', '')) / 10).replace('.', ',') + ' см'
-  return value
+    return str(float(value.replace('mm', '')) / 10).replace(
+        '.', ',') + ' см'.capitalize()
+  return value.capitalize()
 
 
 def transform_data(df):
   for column in df.columns:
-    if 'м' in column or 'mm' in column:
-      df[column] = df[column].apply(transform_value)
-    else:
-      df[column] = df[column].astype(str).str.upper()
+    df[column] = df[column].apply(lambda x: str(x).capitalize())
   return df
 
 
@@ -37,13 +36,13 @@ def convert_years(value):
   try:
     value = int(value)
     if value == 1:
-      return f"{value} год"
+      return f"{value} год".capitalize()
     elif 1 < value % 10 < 5 and (value % 100 < 10 or value % 100 > 20):
-      return f"{value} года"
+      return f"{value} года".capitalize()
     else:
-      return f"{value} лет"
+      return f"{value} лет".capitalize()
   except ValueError:
-    return value
+    return value.capitalize()
 
 
 def apply_transformations(df):
@@ -77,10 +76,8 @@ def convert_to_template(filename, template_filename='Шаблон.xlsx'):
   for row in template_sheet.iter_rows():
     for cell in row:
       corresponding_cell = transformed_sheet[cell.coordinate]
-      corresponding_cell.font = copy(cell.font)
       corresponding_cell.border = copy(cell.border)
       corresponding_cell.fill = copy(cell.fill)
-      corresponding_cell.number_format = copy(cell.number_format)
       corresponding_cell.protection = copy(cell.protection)
       corresponding_cell.alignment = copy(cell.alignment)
 
