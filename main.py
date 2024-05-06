@@ -3,26 +3,31 @@ from fastapi.responses import FileResponse, HTMLResponse
 import pandas as pd
 import numpy as np
 import os
-from openpyxl import load_workbook
-from copy import copy
+from sklearn.feature_extraction.text import TfidfVectorizer
+from sklearn.metrics.pairwise import linear_kernel
 
 app = FastAPI()
+
+
+def normalize_column_names(df):
+  other_columns_to_normalize = {
+      'Разделы': 'Разделы',
+      'Бренд': 'Бренд',
+      'Наименование': 'Наименование',
+      'Артикул': 'Артикул',
+      'Цвет': 'Цвет' 
+  }
+  for original_col, normalized_col in other_columns_to_normalize.items():
+    found_columns = [col for col in df.columns if original_col in col]
+    for col in found_columns:
+      if col != normalized_col:
+        df.rename(columns={col: normalized_col}, inplace=True)
+  return df
 
 
 def read_template(filename):
   template_df = pd.read_excel(filename, engine='openpyxl')
   return template_df
-
-
-def transform_value(value):
-  if pd.isnull(value):
-    return None
-  if 'м' in str(value):
-    return str(value).replace('м', ' см').replace('.', ',').capitalize()
-  if 'mm' in str(value):
-    return str(float(value.replace('mm', '')) / 10).replace(
-        '.', ',') + ' см'.capitalize()
-  return value.capitalize()
 
 
 def transform_data(df):
@@ -32,37 +37,9 @@ def transform_data(df):
   return df
 
 
-def convert_years(value):
-  if pd.isnull(value):
-    return None
-  try:
-    value = int(value)
-    if value == 1:
-      return f"{value} год".capitalize()
-    elif 1 < value % 10 < 5 and (value % 100 < 10 or value % 100 > 20):
-      return f"{value} года".capitalize()
-    else:
-      return f"{value} лет".capitalize()
-  except ValueError:
-    return value.capitalize()
-
-
-def split_colors(df):
-  if 'Цвет' in df.columns:
-    df_colors = df['Цвет'].str.split('/| и ', expand=True)
-    for i, col in enumerate(df_colors.columns):
-      df[f'Цвет-{i+1}'] = df_colors[col].str.strip().apply(
-          lambda x: x.capitalize() if pd.notnull(x) else None)
-    df.drop(columns=['Цвет'], inplace=True)
-  return df
-
-
 def apply_transformations(df):
+  df = normalize_column_names(df)
   df = transform_data(df)
-  df = split_colors(df)
-  for column in df.columns:
-    if 'срок годности' in column.lower():
-      df[column] = df[column].apply(convert_years)
   return df
 
 
@@ -74,10 +51,30 @@ def map_brand_to_id(df, brand_mapping_filename='Бренд.xlsx'):
   return df
 
 
+def map_sections_by_similarity(df, section_mapping_filename='Разделы.xlsx'):
+  section_df = pd.read_excel(section_mapping_filename, engine='openpyxl')
+  if 'Разделы' in df.columns:
+    tfidf_vectorizer = TfidfVectorizer()
+    tfidf_matrix_section = tfidf_vectorizer.fit_transform(
+        section_df['Название'])
+    tfidf_matrix_uploaded = tfidf_vectorizer.transform(df['Разделы'])
+
+    cosine_similarities = linear_kernel(tfidf_matrix_uploaded,
+                                        tfidf_matrix_section)
+
+    df['Разделы'] = [
+        section_df['Название'].iloc[np.argmax(row)]
+        if max(row) > 0 else 'Без категории' for row in cosine_similarities
+    ]
+
+  return df
+
+
 def convert_to_template(filename, template_filename='Шаблон1.xlsx'):
   uploaded_df = pd.read_excel(filename, engine='openpyxl')
   transformed_df = apply_transformations(uploaded_df)
   transformed_df = map_brand_to_id(transformed_df)
+  transformed_df = map_sections_by_similarity(transformed_df)
 
   converted_dir = "converted_uploads"
   os.makedirs(converted_dir, exist_ok=True)
