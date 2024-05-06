@@ -11,7 +11,7 @@
 
  🤖 _**DataPulse-AI**_ is an advanced application developed using the latest achievements in artificial intelligence and machine learning, designed to provide deep analytical insights based on large volumes of data. It assists businesses, researchers, and analysts in quickly uncovering patterns, trends, and anomalies in data, accelerating informed decision-making.
 
-## Features
+## Features 🦾
 DataPulse-AI offers a broad range of data handling capabilities:
 - **Automated data preprocessing:** cleaning, normalizing, and transforming data for analysis.
 - **Advanced data analysis:** leveraging machine learning and deep learning for pattern recognition and forecasting.
