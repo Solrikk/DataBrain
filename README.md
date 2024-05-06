@@ -1,5 +1,5 @@
 <div align="center">
-  <img src="https://github.com/Solrikk/DataPulse/blob/main/assets/gif/3d-isometric-research-of-statistical-data-and-analytics.gif" width="30%"/>
+  <img src="https://github.com/Solrikk/DataPulse-AI/blob/main/assets/gif/3d-isometric-research-of-statistical-data-and-analytics.gif" width="30%"/>
 </div>
 
 
