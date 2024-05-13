@@ -15,19 +15,24 @@ def load_html_file(file_path):
     return file.read()
 
 
-def normalize_column_names(df):
-  other_columns_to_normalize = {
-      'Разделы': 'Разделы',
-      'Бренд': 'Бренд',
-      'Наименование': 'Наименование',
-      'Артикул': 'Артикул',
-      'Цвет': 'Цвет'
-  }
-  for original_col, normalized_col in other_columns_to_normalize.items():
-    found_columns = [col for col in df.columns if original_col in col]
-    for col in found_columns:
-      if col != normalized_col:
-        df.rename(columns={col: normalized_col}, inplace=True)
+def normalize_column_names(df, template_filename='Шаблон для импорта.xlsx'):
+  template_df = pd.read_excel(template_filename)
+  template_columns = list(template_df.columns)
+
+  tfidf_vectorizer = TfidfVectorizer()
+  tfidf_matrix_template = tfidf_vectorizer.fit_transform(template_columns)
+  uploaded_columns = list(df.columns)
+  tfidf_matrix_uploaded = tfidf_vectorizer.transform(uploaded_columns)
+
+  cosine_similarities = linear_kernel(tfidf_matrix_uploaded, tfidf_matrix_template)
+
+  for uploaded_idx, uploaded_col in enumerate(uploaded_columns):
+    matches = cosine_similarities[uploaded_idx]
+    best_match_idx = matches.argmax()
+    if matches[best_match_idx] > 0:  # Can adjust threshold if needed
+      best_match_column = template_columns[best_match_idx]
+      df = df.rename(columns={uploaded_col: best_match_column})
+
   return df
 
 
@@ -58,8 +63,8 @@ def extend_product_name(df):
   return df
 
 
-def apply_transformations(df):
-  df = normalize_column_names(df)
+def apply_transformations(df, template_filename='Шаблон для импорта.xlsx'):
+  df = normalize_column_names(df, template_filename)
   df = transform_data(df)
   df = extend_product_name(df)
   return df
@@ -90,7 +95,7 @@ def map_sections_by_similarity(df, section_mapping_filename='Разделы.xlsx
   return df
 
 
-def convert_to_template(filename, template_filename='Шаблон1.xlsx'):
+def convert_to_template(filename, template_filename='Шаблон для импорта.xlsx'):
   try:
     uploaded_df = pd.read_excel(filename)
   except ValueError as e:
@@ -102,7 +107,7 @@ def convert_to_template(filename, template_filename='Шаблон1.xlsx'):
                         detail="The uploaded file is not a valid Excel file.")
 
   template_df = pd.read_excel(template_filename)
-  transformed_df = apply_transformations(uploaded_df)
+  transformed_df = apply_transformations(uploaded_df, template_filename)
   transformed_df = map_brand_to_id(transformed_df)
   transformed_df = map_sections_by_similarity(transformed_df)
 
