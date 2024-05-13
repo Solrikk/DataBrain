@@ -2,58 +2,57 @@
   <img src="https://github.com/Solrikk/DataBrain/blob/main/assets/gif/3d-isometric-research-of-statistical-data-and-analytics.gif" width="30%"/>
 </div>
 
-
-<div align="center"> <h3> <a href="https://github.com/Solrikk/DataBrain/blob/main/README.md">⭐English⭐</a> | <a href="https://github.com/Solrikk/DataBrain/blob/main/README_RU.md">Russian</a> | <a href="https://github.com/Solrikk/DataBrain/blob/main/README_GE.md">German</a> | <a href="https://github.com/Solrikk/DataBrain/blob/main/README_JP.md">Japanese</a> | <a href="README_KR.md">Korean</a> | <a href="README_CN.md">Chinese</a> </h3> </div>
+<div align="center"> <h3> <a href="https://github.com/Solrikk/DataBrain/blob/main/README.md">Английский</a> | <a href="https://github.com/Solrikk/DataBrain/blob/main/README_RU.md">⭐Русский⭐</a> | <a href="https://github.com/Solrikk/DataBrain/blob/main/README_GE.md">Немецкий</a> | <a href="https://github.com/Solrikk/DataBrain/blob/main/README_JP.md">Японский</a> | <a href="README_KR.md">Корейский</a> | <a href="README_CN.md">Китайский</a> </h3> </div>
 
 -----------------
 
-# Data Brain
+# DataBrain
 
-Data Brain is a powerful FastAPI application designed to transform and manipulate Excel files specifically tailored for e-commerce data. It automates the process of data normalization, transformation, and enrichment to facilitate easy handling and preparation of product catalogs.
+DataBrain - это мощное приложение на основе FastAPI, предназначенное для преобразования и манипуляции с файлами Excel, специально адаптированными для данных электронной коммерции. Оно автоматизирует процесс нормализации данных, их преобразования и обогащения, чтобы упростить обработку и подготовку каталогов продукции.
 
-## Features
-- **Excel File Processing**: Utilizes `openpyxl` for robust Excel file reading and writing.
-- **Normalization and Transformation**: Standardizes column names and applies transformations across datasets to maintain consistency.
-- **Data Enrichment**: Enhances data entries by appending additional information, such as merging product name and color.
-- **Brand and Section Mapping**: Implements mappings from brand names to IDs and categorizes products into sections based on textual similarity.
-- **Interactive File Upload**: Features a simple and intuitive web interface for uploading and automatically processing files.
+## Возможности
+- **Обработка файлов Excel**: Использует `openpyxl` для надежного чтения и записи файлов Excel.
+- **Нормализация и преобразование**: Стандартизирует названия колонок и применяет преобразования к наборам данных для поддержания согласованности.
+- **Обогащение данных**: Улучшает записи данных, добавляя дополнительную информацию, такую как объединение названия продукта и цвета.
+- **Сопоставление брендов и разделов**: Реализует сопоставление названий брендов с ID и категоризацию продуктов в разделы на основе текстового сходства.
+- **Интерактивная загрузка файлов**: Предлагает простой и интуитивно понятный веб-интерфейс для загрузки файлов и их автоматической обработки.
 
-### FastAPI Framework
+### Фреймворк FastAPI
 
-- **Asynchronous Support**: FastAPI utilizes Starlette for its web framework, allowing for asynchronous request handling, which improves the application's performance and scalability.
-- **Type Hints and Automatic Validation**: Utilizes Python type hints to validate data, automatically generating detailed error messages and reducing the development time for data validation logic.
-- **OpenAPI and Swagger UI**: Automatically generates a comprehensive and interactive API documentation, enabling easy testing and debugging of API endpoints.
+- **Поддержка асинхронности**: FastAPI использует Starlette для своего веб-фреймворка, позволяющего обрабатывать асинхронные запросы, что улучшает производительность и масштабируемость приложения.
+- **Подсказки типов и автоматическое валидирование**: Использует подсказки типов Python для валидации данных, автоматически генерируя подробные сообщения об ошибках и уменьшая время разработки для логики валидации данных.
+- **OpenAPI и Swagger UI**: Автоматически генерирует комплексную и интерактивную документацию API, позволяя легко тестировать и отлаживать конечные точки API.
 
-### Data Processing with Pandas and NumPy
+### Обработка данных с помощью Pandas и NumPy
 
-- **Pandas**: Employs Pandas for efficiently handling and transforming data frames. This includes reading Excel files, manipulating columns, and applying transformations. Pandas' powerful functionalities are utilized for complex data operations like normalizing column names and appending data.
-- **NumPy**: In conjunction with Pandas, NumPy is used for numerical operations where needed, enhancing the performance of data manipulation tasks.
+- **Pandas**: Использует Pandas для эффективной обработки и преобразования фреймов данных. Это включает в себя чтение файлов Excel, манипуляцию со столбцами и применение преобразований. Мощные функции Pandas используются для сложных операций с данными, таких как нормализация названий столбцов и добавление данных.
+- **NumPy**: В сочетании с Pandas, NumPy используется для численных операций, когда это необходимо, улучшая производительность задач манипуляции с данными.
 
-### Excel Manipulation with Openpyxl
+### Манипуляция с файлами Excel с помощью Openpyxl
 
-- **Excel File Support**: Leveraging `openpyxl`, a Python library to read and write Excel 2010 xlsx/xlsm/xltx/xltm files, the application handles the input and output of Excel files, allowing for the processing of complex spreadsheets.
+- **Поддержка файлов Excel**: Используя `openpyxl`, библиотеку Python для чтения и записи файлов Excel 2010 xlsx/xlsm/xltx/xltm, приложение обрабатывает ввод и вывод файлов Excel, позволяя обрабатывать сложные электронные таблицы.
 
-### Machine Learning for Text Similarity
+### Машинное обучение для сравнения текстов
 
-- **TF-IDF Vectorizer**: Used from the scikit-learn library, the TF-IDF Vectorizer transforms text data into a matrix of TF-IDF features. This is critical for comparing text similarity, especially in mapping product sections based on similarity to predefined categories.
-- **Cosine Similarity**: Utilizes the cosine similarity measure to find the most relevant category for each product by comparing the TF-IDF vectors of product descriptions with those of predefined categories.
+- **Векторизатор TF-IDF**: Используется из библиотеки scikit-learn, векторизатор TF-IDF преобразует текстовые данные в матрицу признаков TF-IDF. Это критически важно для сравнения текстового сходства, особенно при сопоставлении разделов продуктов на основе сходства с предопределенными категориями.
+- **Косинусное сходство**: Использует меру косинусного сходства для нахождения наиболее подходящей категории для каждого продукта, сравнивая векторы TF-IDF описаний продуктов с векторами предопределенных категорий.
 
-### Deployment and Environment Management
+### Развертывание и управление окружением
 
-- **Nix Package Manager**: Though not explicitly detailed in the code fragments, if utilized, Nix can significantly simplify the deployment process and environment management, ensuring consistency across development and production environments.
+- **Пакетный менеджер Nix**: Хотя в приведенных фрагментах кода это не уточняется, при использовании Nix может значительно упростить процесс развертывания и управление окружением, обеспечивая согласованность между разработочными и производственными средами.
 
-## Noteworthy Technical Features
+## Заслуживающие внимания технические особенности
 
-### Data Normalization and Transformation
+### Нормализация и преобразование данных
 
-The application performs several sophisticated data transformation steps, including:
-- Normalizing column names to follow a consistent schema.
-- Transforming text data to ensure consistency, such as capitalizing and merging specific fields for better readability or processing logic.
+Приложение выполняет несколько сложных шагов преобразования данных, включая:
+- Нормализацию названий столбцов для следования единообразной схеме.
+- Преобразование текстовых данных для обеспечения согласованности, например, капитализация и объединение определенных полей для лучшей читаемости или логики обработки.
 
-### Dynamic Data Mapping
+### Динамическое сопоставление данных
 
-The principle of mapping data, such as brand names to IDs and sections by textual similarity, showcases an application of machine learning techniques in a traditional data processing tool, enhancing automatic categorization and tagging.
+Принцип сопоставления данных, таких как названия брендов с ID и разделы по текстовому сходству, демонстрирует применение методов машинного обучения в традиционном инструменте обработки данных, улучшая автоматическую категоризацию и маркировку.
 
-### Modular Design
+### Модульный дизайн
 
-The application's structure allows for easy extension and modification. Each function, from reading Excel files to applying transformations and mappings, is defined in a modular way, promoting reusability and maintainability.
+Структура приложения позволяет легко расширять и изменять его. Каждая функция, от чтения файлов Excel до применения преобразований и сопоставлений, определена модульным способом, что способствует повторному использованию и обслуживанию.
