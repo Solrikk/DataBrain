@@ -8,6 +8,12 @@ from sklearn.metrics.pairwise import linear_kernel
 
 app = FastAPI()
 
+
+def load_html_file(file_path):
+  with open(file_path, 'r', encoding='utf-8') as file:
+    return file.read()
+
+
 def normalize_column_names(df):
   other_columns_to_normalize = {
       'Разделы': 'Разделы',
@@ -23,32 +29,40 @@ def normalize_column_names(df):
         df.rename(columns={col: normalized_col}, inplace=True)
   return df
 
-def read_template(filename):
-  template_df = pd.read_excel(filename, engine='openpyxl')
-  return template_df
 
 def transform_data(df):
   for column in df.columns:
-    df[column] = df[column].apply(lambda x: str(x).capitalize() if pd.notnull(x) else None)
+    df[column] = df[column].apply(lambda x: str(x).capitalize()
+                                  if pd.notnull(x) else x)
   return df
 
-def append_color_to_name(df):
-    if 'Цвет' in df.columns and 'Наименование' in df.columns:
-        def combine_name_and_color(row):
-            name = str(row['Наименование'])
-            color = str(row['Цвет'])
-            if color.lower() != 'nan' and color not in name.lower():
-                return f"{name} {color}"
-            else:
-                return name
-        df['Наименование'] = df.apply(combine_name_and_color, axis=1)
-    return df
+
+def extend_product_name(df):
+  if 'Цвет' in df.columns and 'Наименование' in df.columns:
+    additional_columns = [
+        'Тип товара', 'Размеры (см)', 'Бренд', 'Коллекция', 'Артикул'
+    ]
+
+    def combine_columns(row):
+      name = str(row['Наименование'])
+      additions = [
+          str(row[col]) for col in additional_columns
+          if col in df.columns and str(row[col]).lower() != 'nan'
+      ]
+      combined = f"{name} {' '.join(additions)}"
+      return ' '.join(sorted(set(combined.split()),
+                             key=combined.split().index))
+
+    df['Наименование'] = df.apply(combine_columns, axis=1)
+  return df
+
 
 def apply_transformations(df):
   df = normalize_column_names(df)
   df = transform_data(df)
-  df = append_color_to_name(df)
+  df = extend_product_name(df)
   return df
+
 
 def map_brand_to_id(df, brand_mapping_filename='Бренд.xlsx'):
   brand_df = pd.read_excel(brand_mapping_filename, engine='openpyxl')
@@ -57,20 +71,23 @@ def map_brand_to_id(df, brand_mapping_filename='Бренд.xlsx'):
     df['Бренд_ID'] = df['Бренд'].map(brand_mapping).fillna('Unknown ID')
   return df
 
+
 def map_sections_by_similarity(df, section_mapping_filename='Разделы.xlsx'):
   section_df = pd.read_excel(section_mapping_filename, engine='openpyxl')
   if 'Разделы' in df.columns:
     tfidf_vectorizer = TfidfVectorizer()
-    tfidf_matrix_section = tfidf_vectorizer.fit_transform(section_df['Название'])
+    tfidf_matrix_section = tfidf_vectorizer.fit_transform(
+        section_df['Название'])
     tfidf_matrix_uploaded = tfidf_vectorizer.transform(df['Разделы'])
 
-    cosine_similarities = linear_kernel(tfidf_matrix_uploaded, tfidf_matrix_section)
-
+    cosine_similarities = linear_kernel(tfidf_matrix_uploaded,
+                                        tfidf_matrix_section)
     df['Разделы'] = [
-        section_df['Название'].iloc[np.argmax(row)] if max(row) > 0 else 'Без категории' for row in cosine_similarities
+        section_df['Название'].iloc[np.argmax(row)]
+        if max(row) > 0 else 'Без категории' for row in cosine_similarities
     ]
-
   return df
+
 
 def convert_to_template(filename, template_filename='Шаблон1.xlsx'):
   uploaded_df = pd.read_excel(filename, engine='openpyxl')
@@ -81,24 +98,15 @@ def convert_to_template(filename, template_filename='Шаблон1.xlsx'):
   converted_dir = "converted_uploads"
   os.makedirs(converted_dir, exist_ok=True)
   transformed_filename = f"{converted_dir}/{os.path.basename(filename)}"
-
   transformed_df.to_excel(transformed_filename, index=False, na_rep="")
-
   return transformed_filename
+
 
 @app.get("/", response_class=HTMLResponse)
 async def main():
-  content = """
-    <html>
-        <body>
-            <form action="/upload/" enctype="multipart/form-data" method="post">
-            <input name="file" type="file">
-            <input type="submit">
-            </form>
-        </body>
-    </html>
-    """
-  return content
+  html_content = load_html_file('index.html')
+  return HTMLResponse(content=html_content)
+
 
 @app.post("/upload/")
 async def upload_file(file: UploadFile = File(...)):
@@ -109,4 +117,5 @@ async def upload_file(file: UploadFile = File(...)):
   with open(file_path, "wb") as f:
     f.write(contents)
   converted_filename = convert_to_template(file_path)
-  return FileResponse(path=converted_filename, filename=os.path.basename(file.filename))
+  return FileResponse(path=converted_filename,
+                      filename=os.path.basename(file.filename))
