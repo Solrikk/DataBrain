@@ -16,6 +16,8 @@ def load_html_file(file_path):
 
 
 def normalize_column_names(df, template_filename='Шаблон для импорта.xlsx'):
+  manual_mapping = {'Бреншафт': 'Бренд', 'Цвета': 'Цвет'}
+
   template_df = pd.read_excel(template_filename)
   template_columns = list(template_df.columns)
 
@@ -24,13 +26,18 @@ def normalize_column_names(df, template_filename='Шаблон для импор
   uploaded_columns = list(df.columns)
   tfidf_matrix_uploaded = tfidf_vectorizer.transform(uploaded_columns)
 
-  cosine_similarities = linear_kernel(tfidf_matrix_uploaded, tfidf_matrix_template)
+  cosine_similarities = linear_kernel(tfidf_matrix_uploaded,
+                                      tfidf_matrix_template)
 
   for uploaded_idx, uploaded_col in enumerate(uploaded_columns):
-    matches = cosine_similarities[uploaded_idx]
-    best_match_idx = matches.argmax()
-    if matches[best_match_idx] > 0:  # Can adjust threshold if needed
+    if uploaded_col in manual_mapping:
+      best_match_column = manual_mapping[uploaded_col]
+    else:
+      matches = cosine_similarities[uploaded_idx]
+      best_match_idx = matches.argmax()
       best_match_column = template_columns[best_match_idx]
+
+    if uploaded_col != best_match_column:
       df = df.rename(columns={uploaded_col: best_match_column})
 
   return df
@@ -39,7 +46,8 @@ def normalize_column_names(df, template_filename='Шаблон для импор
 def transform_data(df):
   for column in df.columns:
     df[column] = df[column].apply(lambda x: str(x).capitalize()
-                                  if pd.notnull(x) else x)
+                                  if pd.notnull(x) else x,
+                                  result_type='expand')
   return df
 
 
@@ -114,8 +122,6 @@ def convert_to_template(filename, template_filename='Шаблон для имп�
   for column in transformed_df.columns:
     if column in template_df.columns:
       template_df[column] = transformed_df[column]
-    else:
-      pass
 
   converted_dir = "converted_uploads"
   os.makedirs(converted_dir, exist_ok=True)
