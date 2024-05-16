@@ -5,6 +5,8 @@ import numpy as np
 import os
 from sklearn.feature_extraction.text import TfidfVectorizer
 from sklearn.metrics.pairwise import linear_kernel
+from sklearn.ensemble import RandomForestClassifier
+from sklearn.model_selection import train_test_split
 import zipfile
 
 app = FastAPI()
@@ -17,18 +19,14 @@ def load_html_file(file_path):
 
 def normalize_column_names(df, template_filename='Шаблон для импорта.xlsx'):
   manual_mapping = {'Бреншафт': 'Бренд', 'Цвета': 'Цвет'}
-
   template_df = pd.read_excel(template_filename)
   template_columns = list(template_df.columns)
-
   tfidf_vectorizer = TfidfVectorizer()
   tfidf_matrix_template = tfidf_vectorizer.fit_transform(template_columns)
   uploaded_columns = list(df.columns)
   tfidf_matrix_uploaded = tfidf_vectorizer.transform(uploaded_columns)
-
   cosine_similarities = linear_kernel(tfidf_matrix_uploaded,
                                       tfidf_matrix_template)
-
   for uploaded_idx, uploaded_col in enumerate(uploaded_columns):
     if uploaded_col in manual_mapping:
       best_match_column = manual_mapping[uploaded_col]
@@ -36,10 +34,8 @@ def normalize_column_names(df, template_filename='Шаблон для импор
       matches = cosine_similarities[uploaded_idx]
       best_match_idx = matches.argmax()
       best_match_column = template_columns[best_match_idx]
-
     if uploaded_col != best_match_column:
       df = df.rename(columns={uploaded_col: best_match_column})
-
   return df
 
 
@@ -51,19 +47,41 @@ def transform_data(df):
   return df
 
 
-def extend_product_name(df):
-  if 'Цвет' in df.columns and 'Наименование' in df.columns:
-    additional_columns = [
-        'Тип товара', 'Размеры (см)', 'Бренд', 'Коллекция', 'Артикул'
-    ]
+def train_product_type_model(train_data_filename='train_data.xlsx'):
+  train_df = pd.read_excel(train_data_filename)
+  X = train_df['Наименование']
+  y = train_df['Тип товара']
+  tfidf_vectorizer = TfidfVectorizer()
+  X_tfidf = tfidf_vectorizer.fit_transform(X)
+  model = RandomForestClassifier()
+  model.fit(X_tfidf, y)
+  return model, tfidf_vectorizer
+
+
+def predict_product_type(name, model, vectorizer):
+  name_tfidf = vectorizer.transform([name])
+  return model.predict(name_tfidf)[0]
+
+
+def extend_product_name(df, model, vectorizer):
+  if 'Наименование' in df.columns and 'Цвет' in df.columns:
+    additional_columns = ['Бренд', 'Коллекция', 'Артикул', 'Размеры (см)']
 
     def combine_columns(row):
       name = str(row['Наименование'])
-      additions = [
-          str(row[col]) for col in additional_columns
-          if col in df.columns and str(row[col]).lower() != 'nan'
-      ]
-      combined = f"{name} {' '.join(additions)}"
+      color = str(row['Цвет'])
+      brand = str(row['Бренд']) if 'Бренд' in row else ''
+      collection = str(row['Коллекция']) if 'Коллекция' in row else ''
+      article = str(row['Артикул']) if 'Артикул' in row else ''
+      sizes = str(row['Размеры (см)']) if 'Размеры (см)' in row else ''
+      product_type = predict_product_type(name, model, vectorizer)
+      sizes_components = sizes.split('x')
+      if len(sizes_components) == 3:
+        sizes_str = f"{sizes_components[0]} x {sizes_components[1]} x {sizes_components[2]}"
+      else:
+        sizes_str = sizes
+      combined = f"{product_type} {brand} {collection} {sizes_str} см {color}".replace(
+          'nan', '').strip()
       return ' '.join(sorted(set(combined.split()),
                              key=combined.split().index))
 
@@ -71,10 +89,13 @@ def extend_product_name(df):
   return df
 
 
+product_type_model, tfidf_vectorizer = train_product_type_model()
+
+
 def apply_transformations(df, template_filename='Шаблон для импорта.xlsx'):
   df = normalize_column_names(df, template_filename)
   df = transform_data(df)
-  df = extend_product_name(df)
+  df = extend_product_name(df, product_type_model, tfidf_vectorizer)
   return df
 
 
@@ -93,7 +114,6 @@ def map_sections_by_similarity(df, section_mapping_filename='Разделы.xlsx
     tfidf_matrix_section = tfidf_vectorizer.fit_transform(
         section_df['Название'])
     tfidf_matrix_uploaded = tfidf_vectorizer.transform(df['Разделы'])
-
     cosine_similarities = linear_kernel(tfidf_matrix_uploaded,
                                         tfidf_matrix_section)
     df['Разделы'] = [
@@ -113,16 +133,13 @@ def convert_to_template(filename, template_filename='Шаблон для имп�
   except zipfile.BadZipFile:
     raise HTTPException(status_code=400,
                         detail="The uploaded file is not a valid Excel file.")
-
   template_df = pd.read_excel(template_filename)
   transformed_df = apply_transformations(uploaded_df, template_filename)
   transformed_df = map_brand_to_id(transformed_df)
   transformed_df = map_sections_by_similarity(transformed_df)
-
   for column in transformed_df.columns:
     if column in template_df.columns:
       template_df[column] = transformed_df[column]
-
   converted_dir = "converted_uploads"
   os.makedirs(converted_dir, exist_ok=True)
   transformed_filename = f"{converted_dir}/{os.path.basename(template_filename)}"
